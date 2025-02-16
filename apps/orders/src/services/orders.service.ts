@@ -10,4 +10,10 @@ export class OrdersService {
   async createOrder(request: CreateOrderRequest) {
     await this.ordersRepository.create(request);
   }
+  async getAllOrders() {
+    return await this.ordersRepository.find({});
+  }
+  async searchOrder(params: any) {
+    return await this.ordersRepository.find(params);
+  }
 }
