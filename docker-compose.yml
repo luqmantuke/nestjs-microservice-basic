@@ -6,34 +6,35 @@ services:
       target: development
     command: npm run start:dev orders
     env_file:
-      - .env
       - ./apps/orders/.env
     depends_on:
-      - mongodb-primary
-      - mongodb-secondary
-      - mongodb-arbiter
+      rabbitmq:
+        condition: service_healthy
+      mongodb-primary:
+        condition: service_started
+      mongodb-secondary:
+        condition: service_started
+      mongodb-arbiter:
+        condition: service_started
     volumes:
       - .:/usr/src/app
       - /usr/src/app/node_modules
     ports:
       - '3000:3000'
-  # billing:
-  #   build:
-  #     context: .
-  #     dockerfile: ./apps/billing/Dockerfile
-  #     target: development
-  #   command: npm run start:dev billing
-  #   env_file:
-  #     - ./apps/billing/.env
-  #   depends_on:
-  #     - mongodb-primary
-  #     - mongodb-secondary
-  #     - mongodb-arbiter
-  #     - rabbitmq
-  #     - auth
-  #   volumes:
-  #     - .:/usr/src/app
-  #     - /usr/src/app/node_modules
+  billing:
+    build:
+      context: .
+      dockerfile: ./apps/billing/Dockerfile
+      target: development
+    command: npm run start:dev billing
+    env_file:
+      - ./apps/billing/.env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
   # auth:
   #   build:
   #     context: .
@@ -52,19 +53,30 @@ services:
   #   volumes:
   #     - .:/usr/src/app
   #     - /usr/src/app/node_modules
-  # rabbitmq:
-  #   image: rabbitmq
-  #   ports:
-  #     - '5672:5672'
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    hostname: rabbitmq
+    ports:
+      - '5672:5672' # AMQP protocol port
+      - '15672:15672' # Management UI port
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    healthcheck:
+      test: ['CMD', 'rabbitmqctl', 'status']
+      interval: 5s
+      timeout: 20s
+      retries: 5
   mongodb-primary:
     image: mongo:8.0.4
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=${MONGODB_ROOT_USERNAME}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGODB_ROOT_PASSWORD}
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=password
     volumes:
       - 'mongodb_master_data:/data/db'
     ports:
-      - '${MONGODB_PORT}:27017'
+      - '27017:27017'
 
   mongodb-secondary:
     image: mongo:8.0.4
