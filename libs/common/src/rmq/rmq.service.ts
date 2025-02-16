@@ -16,6 +16,12 @@ export class RmqService {
         persistent: true,
       },
     };
+    
+  }
+  ack(context: RmqContext) {
+    const channel = context.getChannelRef();
+    const originalMessage = context.getMessage();
+    channel.ack(originalMessage);
   }
 
 
